@@ -7,7 +7,7 @@ import (
 	"github.com/gogf/gf/v2/net/ghttp"
 	"github.com/gogf/gf/v2/os/gcmd"
 
-	"realworld-golang-gf/internal/controller"
+	"github.com/2720851545/realworld-golang-gf/internal/controller"
 )
 
 var (

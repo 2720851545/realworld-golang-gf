@@ -5,7 +5,7 @@ import (
 
 	"github.com/gogf/gf/v2/frame/g"
 
-	"realworld-golang-gf/api/v1"
+	"github.com/2720851545/realworld-golang-gf/api/v1"
 )
 
 var (

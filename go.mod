@@ -1,4 +1,4 @@
-module realworld-golang-gf
+module github.com/2720851545/realworld-golang-gf
 
 go 1.15
 
