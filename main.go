@@ -1,11 +1,9 @@
 package main
 
 import (
-	_ "realworld-golang-gf/internal/packed"
-
 	"github.com/gogf/gf/v2/os/gctx"
 
-	"realworld-golang-gf/internal/cmd"
+	"github.com/2720851545/realworld-golang-gf/internal/cmd"
 )
 
 func main() {
