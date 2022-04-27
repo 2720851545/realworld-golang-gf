@@ -10,6 +10,22 @@ type AllArticlesReq struct {
 }
 
 type AllArticleRes struct {
-	g.Meta   `mime:"application/json"`
-	Articles []entity.Article `json:"articles"`
+	g.Meta `mime:"application/json"`
+	// todo 返回日期, 需要引入第三方json解析,自闭了
+	Articles      []allArticleResArticle `json:"articles"`
+	ArticlesCount int                    `json:"articlesCount"`
+}
+
+type allArticleResArticle struct {
+	entity.Article
+	TagList   []string                   `json:"tagList"`
+	Author    allArticleResArticleAuthor `json:"author"`
+	Favorited bool                       `json:"favorited"`
+}
+
+type allArticleResArticleAuthor struct {
+	Bio       string `json:"bio"`
+	Following bool   `json:"following"`
+	Image     string `json:"image"`
+	Username  string `json:"username"`
 }
