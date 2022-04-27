@@ -12,6 +12,7 @@ func BindController(group *ghttp.RouterGroup) {
 	group.Middleware(CustomizeMiddlewareHandlerResponse)
 
 	group.Bind(controller.NoAuthUserController)
+	group.Bind(controller.ArticleController)
 	group.Group("/", func(group *ghttp.RouterGroup) {
 		group.Middleware(AuthMiddleware)
 		group.Bind(controller.AuthUserController)

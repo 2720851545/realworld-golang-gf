@@ -81,7 +81,7 @@ type UserUpdateReq struct {
 }
 
 type userUpdateResUser struct {
-	Id       int64  `json:"id"`
+	Id       int64  `json:"id" `
 	Email    string `json:"email"`
 	Username string `json:"username"`
 	Bio      string `json:"bio"`
