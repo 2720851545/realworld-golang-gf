@@ -11,7 +11,7 @@ type userRegisterReqUser struct {
 
 type UserRegisterReq struct {
 	g.Meta `path:"/users" method:"post" tags:"用户" summary:"用户注册"`
-	User   *userRegisterReqUser `json:"user"`
+	User   userRegisterReqUser `json:"user"`
 }
 
 type userRegisterResUser struct {
@@ -33,4 +33,13 @@ type CurrentUserReq struct {
 
 type CurrentUserRes struct {
 	g.Meta `mime:"application/json"`
+	User   currentUserResUser `json:"user"`
+}
+
+type currentUserResUser struct {
+	Email    string `json:"email"`
+	Username string `json:"username"`
+	Bio      string `json:"bio"`
+	Image    string `json:"image"`
+	Token    string `json:"token"`
 }

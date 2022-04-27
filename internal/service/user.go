@@ -6,19 +6,42 @@ import (
 	v1 "github.com/2720851545/realworld-golang-gf/api/v1"
 	"github.com/2720851545/realworld-golang-gf/internal/service/internal/dao"
 	"github.com/2720851545/realworld-golang-gf/utility"
+	jwt "github.com/gogf/gf-jwt/v2"
 	"github.com/gogf/gf/v2/database/gdb"
+	"github.com/gogf/gf/v2/errors/gerror"
 	"github.com/gogf/gf/v2/frame/g"
 )
 
 type IUserService interface {
 	// Register(ctx context.Context, req *v1.UserRegisterReq) (i int64, err error)
 	Register(ctx context.Context, req *v1.UserRegisterReq) (res *v1.UserRegisterRes, err error)
+	CurrentUser(ctx context.Context, req *v1.CurrentUserReq) (res *v1.CurrentUserRes, err error)
 }
 
 type userImpl struct{}
 
 func UserService() IUserService {
 	return IUserService(&userImpl{})
+}
+
+func (s *userImpl) CurrentUser(ctx context.Context, req *v1.CurrentUserReq) (res *v1.CurrentUserRes, err error) {
+	var (
+		token string
+		mc    jwt.MapClaims
+	)
+	mc, token, err = authService.GetClaimsFromJWT(ctx)
+	if err != nil {
+		return
+	}
+	g.Log().Info(ctx, mc, token, err)
+	if id, ok := mc["id"]; ok {
+		res = new(v1.CurrentUserRes)
+		res.User.Token = token
+		dao.User.Ctx(ctx).Where("id = ?", id).Scan(&res.User)
+	} else {
+		err = gerror.New("jwt token error, id not found")
+	}
+	return
 }
 
 func (s *userImpl) Register(ctx context.Context, req *v1.UserRegisterReq) (res *v1.UserRegisterRes, err error) {
