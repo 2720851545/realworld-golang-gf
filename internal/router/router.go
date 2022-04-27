@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/2720851545/realworld-golang-gf/internal/controller"
+	"github.com/2720851545/realworld-golang-gf/internal/service"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 )
@@ -10,9 +11,12 @@ func BindController(group *ghttp.RouterGroup) {
 	group.Middleware(ghttp.MiddlewareCORS)
 	group.Middleware(CustomizeMiddlewareHandlerResponse)
 
-	group.Group("/users", func(group *ghttp.RouterGroup) {
-		group.Bind(controller.UserController)
+	group.Bind(controller.NoAuthUserController)
+	group.Group("/", func(group *ghttp.RouterGroup) {
+		group.Middleware(service.Auth().MiddlewareFunc())
+		group.Bind(controller.AuthUserController)
 	})
+
 }
 
 // 参考 ghttp.MiddlewareHandlerResponse

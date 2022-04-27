@@ -27,9 +27,9 @@ func (s *userImpl) Register(ctx context.Context, req *v1.UserRegisterReq) (res *
 		req.User.Image = "https://api.realworld.io/images/smiley-cyrus.jpeg"
 	}
 
+	var id int64
 	err = g.DB().Transaction(ctx, func(ctx context.Context, tx *gdb.TX) error {
 		err = g.Try(func() {
-			var id int64
 			id, err = dao.User.Ctx(ctx).TX(tx).InsertAndGetId(req.User)
 			if err != nil {
 				panic(err)
@@ -40,5 +40,15 @@ func (s *userImpl) Register(ctx context.Context, req *v1.UserRegisterReq) (res *
 		})
 		return err
 	})
+
+	if err == nil {
+		r := g.RequestFromCtx(ctx)
+		r.SetCtxVar("Model", "Register")
+		r.SetCtxVar("User", map[string]interface{}{
+			"id":       id,
+			"username": res.User.Username,
+		})
+		res.User.Token, _ = authService.LoginHandler(ctx)
+	}
 	return res, err
 }
