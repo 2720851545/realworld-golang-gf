@@ -122,7 +122,7 @@ func (s *userImpl) UpdateUserInfo(ctx context.Context, req *v1.UserUpdateReq) (r
 		return
 	}
 	id := gconv.Int64(mc["id"])
-	_, err = dao.User.Ctx(ctx).Data(req.User).OmitEmptyData().Where("id = ?", id).Update()
+	_, err = dao.User.Ctx(ctx).OmitEmptyData().Where("id = ?", id).Update(req.User)
 	res = new(v1.UserUpdateRes)
 	dao.User.Ctx(ctx).Where("id = ?", id).Scan(&res.User)
 	res.User.Token, _ = getLoginToken(ctx, id, res.User.Username)
