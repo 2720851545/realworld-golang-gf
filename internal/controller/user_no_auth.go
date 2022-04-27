@@ -19,3 +19,8 @@ func (c *noAuthUserController) Register(ctx context.Context, req *v1.UserRegiste
 	res, err = service.UserService().Register(ctx, req)
 	return
 }
+
+func (c *noAuthUserController) Login(ctx context.Context, req *v1.UserLoginReq) (res *v1.UserLoginRes, err error) {
+	res, err = service.UserService().Login(ctx, req)
+	return
+}

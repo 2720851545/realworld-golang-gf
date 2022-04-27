@@ -16,3 +16,8 @@ func (c *authUserController) CurrentUser(ctx context.Context, req *v1.CurrentUse
 	res, err = service.UserService().CurrentUser(ctx, req)
 	return
 }
+
+func (c *authUserController) UpdateUserInfo(ctx context.Context, req *v1.UserUpdateReq) (res *v1.UserUpdateRes, err error) {
+	res, err = service.UserService().UpdateUserInfo(ctx, req)
+	return
+}

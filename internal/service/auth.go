@@ -58,22 +58,11 @@ func Unauthorized(ctx context.Context, code int, message string) {
 }
 
 func Authenticator(ctx context.Context) (interface{}, error) {
-	var (
-	// r  = g.RequestFromCtx(ctx)
-	// in model.UserLoginInput
-	)
-	// if err := r.Parse(&in); err != nil {
-	// 	return "", err
-	// }
-
 	ctx = g.RequestFromCtx(ctx).Context()
 	switch ctx.Value("Model").(string) {
-	case "Register":
+	case "Register", "Login":
 		return ctx.Value("User"), nil
 	default:
 		return nil, jwt.ErrFailedAuthentication
 	}
-	// if user := UserService().GetUserByUserNamePassword(ctx, in); user != nil {
-	// 	return user, nil
-	// }
 }
