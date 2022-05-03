@@ -50,9 +50,9 @@ func IdentityHandler(ctx context.Context) interface{} {
 
 func Unauthorized(ctx context.Context, code int, message string) {
 	r := g.RequestFromCtx(ctx)
+	r.Response.Status = 411
 	r.Response.WriteJson(g.Map{
-		"code":    code,
-		"message": message,
+		"errors": g.Array{message},
 	})
 	r.ExitAll()
 }

@@ -14,7 +14,7 @@ database:
     link: "root:lilishop@tcp(127.0.0.1:3306)/realworld"
     # 输出指定sql
     debug: true
-    dryRun: true
+    # dryRun: true
 
 
 gfcli:

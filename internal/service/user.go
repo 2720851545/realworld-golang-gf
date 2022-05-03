@@ -37,7 +37,6 @@ func (s *userImpl) CurrentUser(ctx context.Context, req *v1.CurrentUserReq) (res
 	if err != nil {
 		return
 	}
-	g.Log().Info(ctx, mc, token, err)
 	if id, ok := mc["id"]; ok {
 		res = new(v1.CurrentUserRes)
 		res.User.Token = token
@@ -64,13 +63,14 @@ func (s *userImpl) Register(ctx context.Context, req *v1.UserRegisterReq) (res *
 			g.Log().Info(ctx, "新用户的id=", id)
 			res = new(v1.UserRegisterRes)
 			err = dao.User.Ctx(ctx).Where("id = ?", id).Scan(&res.User)
+
+			if err == nil {
+				res.User.Token, _ = getLoginToken(ctx, id, res.User.Username)
+			}
 		})
 		return err
 	})
 
-	if err == nil {
-		res.User.Token, _ = getLoginToken(ctx, id, res.User.Username)
-	}
 	return res, err
 }
 
