@@ -12,10 +12,11 @@ func BindController(group *ghttp.RouterGroup) {
 	group.Middleware(CustomizeMiddlewareHandlerResponse)
 
 	group.Bind(controller.NoAuthUserController)
-	group.Bind(controller.ArticleController)
+	group.Bind(controller.NoAuthArticleController)
 	group.Group("/", func(group *ghttp.RouterGroup) {
 		group.Middleware(AuthMiddleware)
 		group.Bind(controller.AuthUserController)
+		group.Bind(controller.AuthArticleController)
 	})
 
 }

@@ -8,15 +8,15 @@ import (
 )
 
 var (
-	ArticleController = articleController{}
+	NoAuthArticleController = noAuthArticleController{}
 
 	articleService = service.ArticleService
 )
 
-type articleController struct {
+type noAuthArticleController struct {
 }
 
-func (t *articleController) AllArticle(ctx context.Context, req *v1.AllArticlesReq) (res *v1.AllArticleRes, err error) {
+func (t *noAuthArticleController) AllArticle(ctx context.Context, req *v1.AllArticlesReq) (res *v1.AllArticleRes, err error) {
 	res, err = articleService.AllArticle(ctx, req)
 	return
 }

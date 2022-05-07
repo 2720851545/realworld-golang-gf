@@ -6,7 +6,17 @@ import (
 )
 
 type AllArticlesReq struct {
-	g.Meta `path:"/articles" method:"get" tags:"文章" summary:"所有文章列表"`
+	g.Meta    `path:"/articles" method:"get" tags:"文章" summary:"所有文章列表"`
+	Author    string `p:"author"`
+	Favorited string `p:"favorited"`
+	Tag       string `p:"tag"`
+	Offset    int    `d:"0" p:"offset"`
+	Limit     int    `d:"10" p:"limit"`
+}
+
+type CreateArticleReq struct {
+	g.Meta  `path:"/articles" method:"post" tags:"文章" summary:"创建文章"`
+	Article createArticleReqArticle `json:"article"`
 }
 
 type AllArticleRes struct {
@@ -18,9 +28,10 @@ type AllArticleRes struct {
 
 type allArticleResArticle struct {
 	entity.Article
-	TagList   []string                   `json:"tagList"`
-	Author    allArticleResArticleAuthor `json:"author"`
-	Favorited bool                       `json:"favorited"`
+	TagList        []string                   `json:"tagList"`
+	Author         allArticleResArticleAuthor `json:"author"`
+	Favorited      bool                       `json:"favorited"`
+	FavoritesCount int                        `json:"favoritesCount"`
 }
 
 type allArticleResArticleAuthor struct {
@@ -28,4 +39,19 @@ type allArticleResArticleAuthor struct {
 	Following bool   `json:"following"`
 	Image     string `json:"image"`
 	Username  string `json:"username"`
+}
+
+type createArticleReqArticle struct {
+	Article     entity.Article `json:"article"`
+	Title       string         `json:"title"       `
+	Description string         `json:"description" `
+	Body        string         `json:"body"        `
+	TagList     []string       `json:"tagList"    `
+}
+
+// todo: 1. 排除authorId字段
+// 		 2. 日期格式化
+type CreateArticleRes struct {
+	g.Meta  `mime:"application/json"`
+	Article allArticleResArticle `json:"article"`
 }

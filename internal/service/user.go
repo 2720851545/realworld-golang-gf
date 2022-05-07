@@ -140,3 +140,12 @@ func (s *userImpl) Login(ctx context.Context, req *v1.UserLoginReq) (res *v1.Use
 	res.User.Token, _ = getLoginToken(ctx, res.User.Id, res.User.Username)
 	return res, nil
 }
+
+func isFollowingUser(ctx context.Context, following, followedByID int) bool {
+	count, _ := dao.Follow.Ctx(ctx).Count("following_id = ? and followed_by_id = ?", following, followedByID)
+	return count > 0
+}
+
+func GetUserId(ctx context.Context) interface{} {
+	return gconv.Map(g.RequestFromCtx(ctx).Get("JWT_PAYLOAD"))["id"]
+}
