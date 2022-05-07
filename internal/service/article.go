@@ -34,20 +34,17 @@ func (t *articleService) AllArticle(ctx context.Context, req *v1.AllArticlesReq)
 	err = model.Limit(req.Offset, req.Limit).Scan(&res.Articles)
 
 	for i := range res.Articles {
-		article := &res.Articles[i]
-		dao.User.Ctx(ctx).Where("id = ?", article.AuthorId).Scan(&article.Author)
-		article.Author.Following = isFollowingUser(ctx, gconv.Int(article.AuthorId), gconv.Int(GetUserId(ctx)))
-		article.FavoritesCount, _ = favoritesCount(ctx, gconv.Int(article.Id))
-		article.TagList = getTags(ctx, gconv.Int(article.Id))
+		assignmentArticleDetailInfo(ctx, &res.Articles[i])
 	}
 	return
 }
 
 func (t *articleService) CreateArticle(ctx context.Context, req *v1.CreateArticleReq) (res *v1.CreateArticleRes, err error) {
-	articleDo := do.Article{}
-	if err = gconv.Struct(req.Article, &articleDo); err != nil {
+	var articleDo do.Article
+	if articleDo, err = validateSaveOrUpdateArticle(ctx, req.Article); err != nil {
 		return
 	}
+
 	createdUserId := gconv.Int(GetUserId(ctx))
 	articleDo.Slug = slug.Make(gconv.String(articleDo.Title))
 	articleDo.AuthorId = createdUserId
@@ -65,12 +62,151 @@ func (t *articleService) CreateArticle(ctx context.Context, req *v1.CreateArticl
 
 	res = new(v1.CreateArticleRes)
 	err = dao.Article.Ctx(ctx).Where("id = ?", lastInsertId).Scan(&res.Article)
+	assignmentArticleDetailInfo(ctx, &res.Article)
 
-	dao.User.Ctx(ctx).Where("id = ?", createdUserId).Scan(&res.Article.Author)
-	res.Article.Author.Following = isFollowingUser(ctx, createdUserId, createdUserId)
-	res.Article.FavoritesCount, _ = favoritesCount(ctx, gconv.Int(lastInsertId))
-	res.Article.TagList = getTags(ctx, gconv.Int(res.Article.Id))
 	return
+}
+
+func (t *articleService) UpdateArticle(ctx context.Context, req *v1.UpdateArticleReq) (res *v1.UpdateArticleRes, err error) {
+	var articleDo do.Article
+	if articleDo, err = validateSaveOrUpdateArticle(ctx, req.Article); err != nil {
+		return
+	}
+
+	if !g.IsEmpty(articleDo.Title) {
+		articleDo.Slug = slug.Make(gconv.String(articleDo.Title))
+	}
+	articleDo.UpdatedAt = gtime.Now()
+
+	if _, err = dao.Article.Ctx(ctx).Where("slug = ", req.Slug).OmitEmpty().Update(articleDo); err != nil {
+		return
+	}
+
+	res = new(v1.UpdateArticleRes)
+	err = dao.Article.Ctx(ctx).Where("slug = ?", req.Slug).Scan(&res.Article)
+	assignmentArticleDetailInfo(ctx, &res.Article)
+	return
+}
+
+func validateSaveOrUpdateArticle(ctx context.Context, reqArticle interface{}) (articleDo do.Article, err error) {
+	if err = gconv.Struct(reqArticle, &articleDo); err != nil {
+		return
+	}
+
+	return
+}
+
+func (t *articleService) FeedArticle(ctx context.Context, req *v1.FeedArticleReq) (res *v1.FeedArticleRes, err error) {
+	res = new(v1.FeedArticleRes)
+	err = dao.Article.Ctx(ctx).Where("author_id in (select following_id from follow where followed_by_id = ? )",
+		GetUserId(ctx)).Scan(&res.Articles)
+	for i := range res.Articles {
+		assignmentArticleDetailInfo(ctx, &res.Articles[i])
+	}
+	return
+}
+
+func (t *articleService) SignalArticleBySulg(ctx context.Context, req *v1.SignalArticleBySulgReq) (res *v1.SignalArticleBySulgRes, err error) {
+	res = new(v1.SignalArticleBySulgRes)
+	err = dao.Article.Ctx(ctx).Where("slug = ?", req.Slug).Scan(&res.Article)
+	assignmentArticleDetailInfo(ctx, &res.Article)
+	return
+}
+
+func (t *articleService) FavoriteArticle(ctx context.Context, req *v1.FavoriteArticleReq) (res *v1.FavoriteArticleRes, err error) {
+	res = new(v1.FavoriteArticleRes)
+	var id gdb.Value
+	if id, err = dao.Article.Ctx(ctx).Where("slug = ?", req.Slug).Value("id"); err != nil {
+		return
+	}
+
+	userId := GetUserId(ctx)
+	if i, err := dao.Favorite.Ctx(ctx).Count(
+		"favorite_id = ? and favorite_by_id = ?", id, userId); i == 0 && err == nil {
+		dao.Favorite.Ctx(ctx).Insert(do.Favorite{
+			CreatedAt:    gtime.Now(),
+			FavoriteId:   id,
+			FavoriteById: userId,
+		})
+	}
+	err = dao.Article.Ctx(ctx).Where("id = ?", id).Scan(&res.Article)
+	assignmentArticleDetailInfo(ctx, &res.Article)
+	return
+}
+
+func (t *articleService) UnfavoriteArticle(ctx context.Context, req *v1.UnfavoriteArticleReq) (res *v1.UnfavoriteArticleRes, err error) {
+	res = new(v1.UnfavoriteArticleRes)
+	var id gdb.Value
+	if id, err = dao.Article.Ctx(ctx).Where("slug = ?", req.Slug).Value("id"); err != nil {
+		return
+	}
+	dao.Favorite.Ctx(ctx).Delete("favorite_id = ? and favorite_by_id = ?", id, GetUserId(ctx))
+
+	err = dao.Article.Ctx(ctx).Where("id = ?", id).Scan(&res.Article)
+	assignmentArticleDetailInfo(ctx, &res.Article)
+	return
+}
+
+func (t *articleService) CreateCommentArticle(ctx context.Context, req *v1.CreateCommentArticleReq) (res *v1.CreateCommentArticleRes, err error) {
+	res = new(v1.CreateCommentArticleRes)
+
+	var articleId gdb.Value
+	if articleId, err = dao.Article.Ctx(ctx).Where("slug = ?", req.Slug).Value("id"); err != nil {
+		return
+	}
+	commentId, err := dao.Comment.Ctx(ctx).InsertAndGetId(do.Comment{
+		CreatedAt: gtime.Now(),
+		UpdatedAt: gtime.Now(),
+		ArticleId: articleId,
+		AuthorId:  GetUserId(ctx),
+		Body:      req.Comment.Body,
+	})
+	if err != nil {
+		return
+	}
+
+	err = dao.Comment.Ctx(ctx).Where("id = ?", commentId).Scan(&res.Comment)
+	if err != nil {
+		return
+	}
+	err = dao.User.Ctx(ctx).Where("id = ?", res.Comment.AuthorId).Scan(&res.Comment.Author)
+	if err != nil {
+		return
+	}
+	res.Comment.Author.Following = isFollowingUser(ctx, res.Comment.AuthorId, gconv.Int(GetUserId(ctx)))
+	return
+}
+
+func (t *articleService) DeleteCommentForArticle(ctx context.Context, req *v1.DeleteCommentForArticleReq) (err error) {
+	dao.Comment.Ctx(ctx).Delete("id = ?", req.CommentId)
+	return
+}
+
+func (t *articleService) DeleteArticle(ctx context.Context, req *v1.DeleteArticleReq) (err error) {
+	dao.Article.Ctx(ctx).Delete("slug = ?", req.Slug)
+	return
+}
+
+func (t *articleService) AllCommentForArticle(ctx context.Context, req *v1.AllCommentForArticleReq) (res *v1.AllCommentForArticleRes, err error) {
+	res = new(v1.AllCommentForArticleRes)
+	articleId, err := dao.Article.Ctx(ctx).Where("slug = ?", req.Slug).Value("id")
+	dao.Comment.Ctx(ctx).Scan(&res.Comments, g.Map{
+		"article_id": articleId,
+	})
+
+	for i := range res.Comments {
+		comment := &res.Comments[i]
+		err = dao.User.Ctx(ctx).Where("id = ?", comment.AuthorId).Scan(&comment.Author)
+		comment.Author.Following = isFollowingUser(ctx, comment.AuthorId, gconv.Int(GetUserId(ctx)))
+	}
+	return
+}
+
+func assignmentArticleDetailInfo(ctx context.Context, article *v1.AllArticleResArticle) {
+	dao.User.Ctx(ctx).Where("id = ?", article.AuthorId).Scan(&article.Author)
+	article.Author.Following = isFollowingUser(ctx, article.AuthorId, gconv.Int(GetUserId(ctx)))
+	article.FavoritesCount, _ = favoritesCount(ctx, gconv.Int(article.Id))
+	article.TagList = getTags(ctx, gconv.Int(article.Id))
 }
 
 func favoritesCount(ctx context.Context, articleId int) (count int, err error) {

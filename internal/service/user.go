@@ -6,6 +6,7 @@ import (
 
 	v1 "github.com/2720851545/realworld-golang-gf/api/v1"
 	"github.com/2720851545/realworld-golang-gf/internal/service/internal/dao"
+	"github.com/2720851545/realworld-golang-gf/internal/service/internal/do"
 	"github.com/2720851545/realworld-golang-gf/utility"
 	jwt "github.com/gogf/gf-jwt/v2"
 	"github.com/gogf/gf/v2/database/gdb"
@@ -20,6 +21,9 @@ type IUserService interface {
 	CurrentUser(ctx context.Context, req *v1.CurrentUserReq) (res *v1.CurrentUserRes, err error)
 	Login(ctx context.Context, req *v1.UserLoginReq) (res *v1.UserLoginRes, err error)
 	UpdateUserInfo(ctx context.Context, req *v1.UserUpdateReq) (res *v1.UserUpdateRes, err error)
+	Profile(ctx context.Context, req *v1.ProfileReq) (res *v1.ProfileRes, err error)
+	FollowProfile(ctx context.Context, req *v1.FollowProfileReq) (res *v1.FollowProfileRes, err error)
+	UnfollowProfile(ctx context.Context, req *v1.UnFollowProfileReq) (res *v1.UnFollowProfileRes, err error)
 }
 
 type userImpl struct{}
@@ -141,11 +145,60 @@ func (s *userImpl) Login(ctx context.Context, req *v1.UserLoginReq) (res *v1.Use
 	return res, nil
 }
 
+func (t *userImpl) Profile(ctx context.Context, req *v1.ProfileReq) (res *v1.ProfileRes, err error) {
+	res = new(v1.ProfileRes)
+	err = dao.User.Ctx(ctx).Scan(&res.Profile, "username = ?", req.Username)
+	res.Profile.Following = isFollowingUser(ctx, res.Profile.Id, gconv.Int(GetUserId(ctx)))
+	return
+}
+
+func (t *userImpl) FollowProfile(ctx context.Context, req *v1.FollowProfileReq) (res *v1.FollowProfileRes, err error) {
+	res = new(v1.FollowProfileRes)
+	var userId interface{}
+	followedId := gconv.Int(GetUserId(ctx))
+	userId, err = dao.User.Ctx(ctx).Where("username = ?", req.Username).Value("id")
+	if err != nil {
+		return
+	}
+	if c, _ := dao.Follow.Ctx(ctx).Count("following_id = ? and followed_by_id = ?", userId, followedId); err == nil && c == 0 {
+		dao.Follow.Ctx(ctx).Insert(do.Follow{
+			FollowingId:  userId,
+			FollowedById: followedId,
+		})
+	}
+
+	err = dao.User.Ctx(ctx).Scan(&res.Profile, "id = ?", userId)
+	if err != nil {
+		return
+	}
+	res.Profile.Following = isFollowingUser(ctx, gconv.Int(userId), gconv.Int(GetUserId(ctx)))
+	return
+}
+
+func (t *userImpl) UnfollowProfile(ctx context.Context, req *v1.UnFollowProfileReq) (res *v1.UnFollowProfileRes, err error) {
+	res = new(v1.UnFollowProfileRes)
+
+	followingUserId, err := dao.User.Ctx(ctx).Where("username = ?", req.Username).Value("id")
+	if err != nil {
+		return
+	}
+	dao.Follow.Ctx(ctx).Delete("following_id = ? and followed_by_id = ?", followingUserId, gconv.Int(GetUserId(ctx)))
+
+	err = dao.User.Ctx(ctx).Scan(&res.Profile, "id = ?", followingUserId)
+	if err != nil {
+		return
+	}
+	res.Profile.Following = isFollowingUser(ctx, gconv.Int(followingUserId), gconv.Int(GetUserId(ctx)))
+	return
+}
+
 func isFollowingUser(ctx context.Context, following, followedByID int) bool {
 	count, _ := dao.Follow.Ctx(ctx).Count("following_id = ? and followed_by_id = ?", following, followedByID)
 	return count > 0
 }
 
 func GetUserId(ctx context.Context) interface{} {
+	r := g.RequestFromCtx(ctx)
+	g.Log().Info(ctx, r)
 	return gconv.Map(g.RequestFromCtx(ctx).Get("JWT_PAYLOAD"))["id"]
 }

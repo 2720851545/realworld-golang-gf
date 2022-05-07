@@ -20,3 +20,13 @@ func (t *noAuthArticleController) AllArticle(ctx context.Context, req *v1.AllArt
 	res, err = articleService.AllArticle(ctx, req)
 	return
 }
+
+func (t *noAuthArticleController) SignalArticleBySulg(ctx context.Context, req *v1.SignalArticleBySulgReq) (res *v1.SignalArticleBySulgRes, err error) {
+	res, err = articleService.SignalArticleBySulg(ctx, req)
+	return
+}
+
+func (t *noAuthArticleController) AllCommentForAricle(ctx context.Context, req *v1.AllCommentForArticleReq) (res *v1.AllCommentForArticleRes, err error) {
+	res, err = articleService.AllCommentForArticle(ctx, req)
+	return
+}

@@ -3,9 +3,12 @@ package router
 import (
 	"github.com/2720851545/realworld-golang-gf/internal/controller"
 	"github.com/2720851545/realworld-golang-gf/internal/service"
+	jwt "github.com/gogf/gf-jwt/v2"
 	"github.com/gogf/gf/v2/frame/g"
 	"github.com/gogf/gf/v2/net/ghttp"
 )
+
+var jwtAuth = service.Auth()
 
 func BindController(group *ghttp.RouterGroup) {
 	group.Middleware(ghttp.MiddlewareCORS)
@@ -22,12 +25,19 @@ func BindController(group *ghttp.RouterGroup) {
 }
 
 func AuthMiddleware(r *ghttp.Request) {
-	service.Auth().MiddlewareFunc()(r)
+	jwtAuth.MiddlewareFunc()(r)
 	r.Middleware.Next()
 }
 
 // 参考 ghttp.MiddlewareHandlerResponse
 func CustomizeMiddlewareHandlerResponse(r *ghttp.Request) {
+
+	// 所有路由注入登陆用户信息
+	claims, _, err := service.Auth().GetClaimsFromJWT(r.GetCtx())
+	if err == nil && int64(claims["exp"].(float64)) >= jwtAuth.TimeFunc().Unix() {
+		r.SetParam(jwt.PayloadKey, claims)
+	}
+
 	r.Middleware.Next()
 
 	// There's custom buffer content, it then exits current handler.
@@ -37,9 +47,9 @@ func CustomizeMiddlewareHandlerResponse(r *ghttp.Request) {
 
 	var (
 		ctx = r.Context()
-		err = r.GetError()
 		res = r.GetHandlerResponse()
 	)
+	err = r.GetError()
 	if err != nil {
 		res = err.Error()
 		r.Response.Status = 500
