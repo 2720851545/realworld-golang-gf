@@ -30,3 +30,8 @@ func (t *noAuthArticleController) AllCommentForAricle(ctx context.Context, req *
 	res, err = articleService.AllCommentForArticle(ctx, req)
 	return
 }
+
+func (t *noAuthArticleController) TagsForArticle(ctx context.Context, req *v1.TagsReq) (res *v1.TagsRes, err error) {
+	res, err = articleService.TagsForArticle(ctx, req)
+	return
+}

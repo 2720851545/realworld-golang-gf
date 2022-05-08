@@ -23,7 +23,7 @@ func (t *articleService) AllArticle(ctx context.Context, req *v1.AllArticlesReq)
 	var model *gdb.Model = dao.Article.Ctx(ctx).Safe(false)
 	switch true {
 	case !g.IsEmpty(req.Author):
-		model.Where("author_id = ?", req.Author)
+		model.Where("author_id = (select id from user where username = ?)", req.Author)
 	case !g.IsEmpty(req.Tag):
 		model.Where("id in (SELECT article_model_id FROM article_tags WHERE tag_model_id = (SELECT id FROM tag WHERE tag = ?))", req.Tag)
 	case !g.IsEmpty(req.Favorited):
@@ -33,6 +33,9 @@ func (t *articleService) AllArticle(ctx context.Context, req *v1.AllArticlesReq)
 	res.ArticlesCount, _ = model.Count()
 	err = model.Limit(req.Offset, req.Limit).Scan(&res.Articles)
 
+	if len(res.Articles) == 0 {
+		res.Articles = make([]v1.AllArticleResArticle, 0)
+	}
 	for i := range res.Articles {
 		assignmentArticleDetailInfo(ctx, &res.Articles[i])
 	}
@@ -78,12 +81,23 @@ func (t *articleService) UpdateArticle(ctx context.Context, req *v1.UpdateArticl
 	}
 	articleDo.UpdatedAt = gtime.Now()
 
-	if _, err = dao.Article.Ctx(ctx).Where("slug = ", req.Slug).OmitEmpty().Update(articleDo); err != nil {
+	articleIdValue, err := dao.Article.Ctx(ctx).Value("id", "slug = ?", req.Slug)
+	if err != nil {
+		return
+	}
+
+	articleId := gconv.Int(articleIdValue)
+	if _, err = dao.Article.Ctx(ctx).Where("id = ", articleId).OmitEmpty().Update(articleDo); err != nil {
+		return
+	}
+
+	err = SaveTags(ctx, articleId, req.Article.TagList)
+	if err != nil {
 		return
 	}
 
 	res = new(v1.UpdateArticleRes)
-	err = dao.Article.Ctx(ctx).Where("slug = ?", req.Slug).Scan(&res.Article)
+	err = dao.Article.Ctx(ctx).Where("id = ?", articleId).Scan(&res.Article)
 	assignmentArticleDetailInfo(ctx, &res.Article)
 	return
 }
@@ -199,6 +213,13 @@ func (t *articleService) AllCommentForArticle(ctx context.Context, req *v1.AllCo
 		err = dao.User.Ctx(ctx).Where("id = ?", comment.AuthorId).Scan(&comment.Author)
 		comment.Author.Following = isFollowingUser(ctx, comment.AuthorId, gconv.Int(GetUserId(ctx)))
 	}
+	return
+}
+
+func (t *articleService) TagsForArticle(ctx context.Context, req *v1.TagsReq) (res *v1.TagsRes, err error) {
+	res = new(v1.TagsRes)
+	arr, err := dao.Tag.Ctx(ctx).Array("tag")
+	res.Tags = gconv.Strings(arr)
 	return
 }
 

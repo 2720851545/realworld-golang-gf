@@ -22,7 +22,7 @@ func init() {
 		MaxRefresh:      time.Minute * 30,
 		IdentityKey:     "id",
 		TokenLookup:     "header: Authorization",
-		TokenHeadName:   "Token",
+		TokenHeadName:   "Bearer",
 		TimeFunc:        time.Now,
 		Authenticator:   Authenticator,
 		Unauthorized:    Unauthorized,

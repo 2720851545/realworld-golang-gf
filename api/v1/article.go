@@ -98,6 +98,15 @@ type DeleteArticleRes struct {
 	g.Meta `mime:"application/json"`
 }
 
+type TagsReq struct {
+	g.Meta `path:"/tags" method:"get" tags:"文章" summary:"标签列表"`
+}
+
+type TagsRes struct {
+	g.Meta `mime:"application/json"`
+	Tags   []string `json:"tags"`
+}
+
 type AllArticleRes struct {
 	g.Meta `mime:"application/json"`
 	// todo 返回日期, 需要引入第三方json解析,自闭了
