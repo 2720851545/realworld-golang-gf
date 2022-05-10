@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/2720851545/realworld-golang-gf/internal/controller"
+	"github.com/2720851545/realworld-golang-gf/internal/model/vo"
 	"github.com/2720851545/realworld-golang-gf/internal/service"
 	jwt "github.com/gogf/gf-jwt/v2"
 	"github.com/gogf/gf/v2/frame/g"
@@ -51,8 +52,12 @@ func CustomizeMiddlewareHandlerResponse(r *ghttp.Request) {
 	)
 	err = r.GetError()
 	if err != nil {
-		res = err.Error()
 		r.Response.Status = 500
+		res = vo.Error{
+			Errors: g.Map{
+				"": g.Array{err},
+			},
+		}
 	}
 	internalErr := r.Response.WriteJson(res)
 	if internalErr != nil {
